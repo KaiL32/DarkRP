@@ -16,14 +16,15 @@ function meta:hungerUpdate()
 
     if self:getDarkRPVar("Energy") == 0 then
         local health = self:Health()
+        if health > 10 then
+            local dmg = DamageInfo()
+            dmg:SetDamage(GAMEMODE.Config.starverate)
+            dmg:SetInflictor(self)
+            dmg:SetAttacker(self)
+            dmg:SetDamageType(bit.bor(DMG_DISSOLVE, DMG_NERVEGAS))
 
-        local dmg = DamageInfo()
-        dmg:SetDamage(GAMEMODE.Config.starverate)
-        dmg:SetInflictor(self)
-        dmg:SetAttacker(self)
-        dmg:SetDamageType(bit.bor(DMG_DISSOLVE, DMG_NERVEGAS))
-
-        self:TakeDamageInfo(dmg)
+            self:TakeDamageInfo(dmg)
+        end
 
         if health - GAMEMODE.Config.starverate <= 0 then
             self.Slayed = true

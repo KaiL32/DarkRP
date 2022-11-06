@@ -1,7 +1,6 @@
 AddCSLuaFile()
 
 if CLIENT then
-    SWEP.PrintName = "Battering Ram"
     SWEP.Slot = 5
     SWEP.SlotPos = 1
     SWEP.DrawAmmo = false
@@ -11,6 +10,7 @@ end
 -- Variables that are used on both client and server
 DEFINE_BASECLASS("weapon_cs_base2")
 
+SWEP.PrintName = "Battering Ram"
 SWEP.Author = "DarkRP Developers"
 SWEP.Instructions = "Left click to break open doors/unfreeze props or get people out of their vehicles\nRight click to raise"
 SWEP.Contact = ""
@@ -201,16 +201,20 @@ Desc: +attack1 has been pressed
 function SWEP:PrimaryAttack()
     if not self:GetIronsights() then return end
 
+    local Owner = self:GetOwner()
+
+    if not IsValid(Owner) then return end
+
     self:SetNextPrimaryFire(CurTime() + 0.1)
 
-    self:GetOwner():LagCompensation(true)
-    local trace = self:GetOwner():GetEyeTrace()
-    self:GetOwner():LagCompensation(false)
+    Owner:LagCompensation(true)
+    local trace = Owner:GetEyeTrace()
+    Owner:LagCompensation(false)
 
-    local hasRammed = getRamFunction(self:GetOwner(), trace)()
+    local hasRammed = getRamFunction(Owner, trace)()
 
     if SERVER then
-        hook.Call("onDoorRamUsed", GAMEMODE, hasRammed, self:GetOwner(), trace)
+        hook.Call("onDoorRamUsed", GAMEMODE, hasRammed, Owner, trace)
     end
 
     if not hasRammed then return end
@@ -219,9 +223,9 @@ function SWEP:PrimaryAttack()
 
     self:SetTotalUsedMagCount(self:GetTotalUsedMagCount() + 1)
 
-    self:GetOwner():SetAnimation(PLAYER_ATTACK1)
-    self:GetOwner():EmitSound(self.Sound)
-    self:GetOwner():ViewPunch(Angle(-10, math.Round(util.SharedRandom("DarkRP_DoorRam" .. self:EntIndex() .. "_" .. self:GetTotalUsedMagCount(), -5, 5)), 0))
+    Owner:SetAnimation(PLAYER_ATTACK1)
+    Owner:EmitSound(self.Sound)
+    Owner:ViewPunch(Angle(-10, math.Round(util.SharedRandom("DarkRP_DoorRam" .. self:EntIndex() .. "_" .. self:GetTotalUsedMagCount(), -5, 5)), 0))
 end
 
 function SWEP:SecondaryAttack()

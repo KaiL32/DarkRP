@@ -546,7 +546,7 @@ DarkRP.findEmptyPos = DarkRP.stub{
         },
         {
             name = "area",
-            description = "The hull to check, this is Vector(16, 16, 64) for players.",
+            description = "The hull to check, this is Vector(16, 16, 72) for players.",
             type = "Vector",
             optional = false
         }
@@ -721,6 +721,27 @@ DarkRP.PLAYER.customEntityLimitReached = DarkRP.stub{
             name = "limitReached",
             description = "Whether the limit has been reached.",
             type = "boolean"
+        }
+    },
+    metatable = DarkRP.PLAYER
+}
+
+DarkRP.PLAYER.customEntityCount = DarkRP.stub{
+    name = "customEntityCount",
+    description = "Get the count of a custom entity.",
+    parameters = {
+        {
+            name = "tblEnt",
+            description = "The entity table (from the DarkRPEntities table).",
+            type = "table",
+            optional = false
+        }
+    },
+    returns = {
+        {
+            name = "count",
+            description = "The current count of the custom entity.",
+            type = "number"
         }
     },
     metatable = DarkRP.PLAYER
@@ -970,7 +991,7 @@ DarkRP.hookStub{
         },
         {
             name = "ent",
-            description = "The spawned vehicle.",
+            description = "The spawned entity.",
             type = "Entity"
         },
         {

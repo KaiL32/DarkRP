@@ -44,6 +44,7 @@ SWEP.AdminOnly = false
 SWEP.UseHands = true
 
 SWEP.HoldType = "normal"
+SWEP.LoweredHoldType = "normal"
 
 SWEP.Primary.Sound = Sound("Weapon_AK47.Single")
 SWEP.Primary.Recoil = 1.5
@@ -70,6 +71,9 @@ function SWEP:SetIronsights(b)
     if (b ~= self:GetIronsights()) then
         self:SetIronsightsPredicted(b)
         self:SetIronsightsTime(CurTime())
+        if GAMEMODE.Config.ironshoot then
+            self:SetHoldType(b and self.HoldType or self.LoweredHoldType)
+        end
         if CLIENT then
             self:CalcViewModel()
         end
@@ -106,7 +110,7 @@ function SWEP:Initialize()
         self:ResetDarkRPBones(vm)
     end
 
-    self:SetHoldType("normal")
+    self:SetHoldType(GAMEMODE.Config.ironshoot and self.LoweredHoldType or self.HoldType)
     if SERVER then
         self:SetNPCMinBurst(30)
         self:SetNPCMaxBurst(30)
@@ -117,7 +121,7 @@ function SWEP:Initialize()
 end
 
 function SWEP:Deploy()
-    self:SetHoldType("normal")
+    self:SetHoldType(GAMEMODE.Config.ironshoot and self.LoweredHoldType or self.HoldType)
     self:SetIronsights(false)
     self:SetReloading(false)
     self:SetReloadEndTime(0)
@@ -161,27 +165,27 @@ function SWEP:PrimaryAttack()
 
     if self:GetBurstBulletNum() > 0 and CurTime() < self:GetBurstTime() then return end
 
-    if self.MultiMode and self:GetOwner():KeyDown(IN_USE) then
+    local Owner = self:GetOwner()
+
+    if not IsValid(Owner) then return end
+
+    if self.MultiMode and Owner:KeyDown(IN_USE) then
         if self:GetFireMode() == "semi" then
             self:SetFireMode("burst")
             self.Primary.Automatic = false
-            self:GetOwner():PrintMessage(HUD_PRINTCENTER, DarkRP.getPhrase("switched_burst"))
+            Owner:PrintMessage(HUD_PRINTCENTER, DarkRP.getPhrase("switched_burst"))
         elseif self:GetFireMode() == "burst" then
             self:SetFireMode("auto")
             self.Primary.Automatic = true
-            self:GetOwner():PrintMessage(HUD_PRINTCENTER, DarkRP.getPhrase("switched_fully_auto"))
+            Owner:PrintMessage(HUD_PRINTCENTER, DarkRP.getPhrase("switched_fully_auto"))
         elseif self:GetFireMode() == "auto" then
             self:SetFireMode("semi")
             self.Primary.Automatic = false
-            self:GetOwner():PrintMessage(HUD_PRINTCENTER, DarkRP.getPhrase("switched_semi_auto"))
+            Owner:PrintMessage(HUD_PRINTCENTER, DarkRP.getPhrase("switched_semi_auto"))
         end
         self:SetNextPrimaryFire(CurTime() + 0.5)
         self:SetNextSecondaryFire(CurTime() + 0.5)
         return
-    end
-
-    if self:GetHoldType() == "normal" and not GAMEMODE.Config.ironshoot then
-        self:SetHoldType(self.HoldType)
     end
 
     if self:GetFireMode() ~= "burst" then
@@ -219,32 +223,35 @@ function SWEP:PrimaryAttack()
 
     self:SetLastPrimaryAttack(CurTime())
 
-    if self:GetOwner():IsNPC() then return end
+    if Owner:IsNPC() then return end
 
     -- Punch the player's view
-    self:GetOwner():ViewPunch(Angle(util.SharedRandom("DarkRP_CSBase" .. self:EntIndex() .. "Mag" .. self:GetTotalUsedMagCount() .. "p" .. self:Clip1(), -1.2, -1.1) * self.Primary.Recoil, util.SharedRandom("DarkRP_CSBase" .. self:EntIndex() .. "Mag" .. self:GetTotalUsedMagCount() .. "y" .. self:Clip1(), -1.1, 1.1) * self.Primary.Recoil, 0))
+    Owner:ViewPunch(Angle(util.SharedRandom("DarkRP_CSBase" .. self:EntIndex() .. "Mag" .. self:GetTotalUsedMagCount() .. "p" .. self:Clip1(), -1.2, -1.1) * self.Primary.Recoil, util.SharedRandom("DarkRP_CSBase" .. self:EntIndex() .. "Mag" .. self:GetTotalUsedMagCount() .. "y" .. self:Clip1(), -1.1, 1.1) * self.Primary.Recoil, 0))
 end
 
 function SWEP:CSShootBullet(dmg, recoil, numbul, cone)
-    if not IsValid(self:GetOwner()) then return end
+     local Owner = self:GetOwner()
+
+    if not IsValid(Owner) then return end
+
     numbul = numbul or 1
     cone = cone or 0.01
 
     local bullet = {}
     bullet.Num = numbul or 1
-    bullet.Src = self:GetOwner():GetShootPos()  -- Source
-    bullet.Dir = (self:GetOwner():GetAimVector():Angle() + self:GetOwner():GetViewPunchAngles()):Forward() -- Dir of bullet
-    bullet.Spread = Vector(cone, cone, 0)       -- Aim Cone
-    bullet.Tracer = 4                           -- Show a tracer on every x bullets
-    bullet.Force = 5                            -- Amount of force to give to phys objects
+    bullet.Src = Owner:GetShootPos()   -- Source
+    bullet.Dir = (Owner:GetAimVector():Angle() + Owner:GetViewPunchAngles()):Forward() -- Dir of bullet
+    bullet.Spread = Vector(cone, cone, 0)        -- Aim Cone
+    bullet.Tracer = 4                            -- Show a tracer on every x bullets
+    bullet.Force = 5                             -- Amount of force to give to phys objects
     bullet.Damage = dmg
 
-    self:GetOwner():FireBullets(bullet)
-    self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)   -- View model animation
-    self:GetOwner():MuzzleFlash()               -- Crappy muzzle light
-    self:GetOwner():SetAnimation(PLAYER_ATTACK1) -- 3rd Person Animation
+    Owner:FireBullets(bullet)
+    self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)    -- View model animation
+    Owner:MuzzleFlash()                -- Crappy muzzle light
+    Owner:SetAnimation(PLAYER_ATTACK1) -- 3rd Person Animation
 
-    if self:GetOwner():IsNPC() then return end
+    if Owner:IsNPC() then return end
 
     -- Part of workaround, different viewmodel position if shots have been fired
     if CLIENT then self.hasShot = true end
@@ -314,14 +321,14 @@ function SWEP:GetViewModelPosition(pos, ang)
         end
 
         if self.IronSightsPosAfterShootingAdjustment then
-            Offset = self.IronSightsPosAfterShootingAdjustment
-            Right = ang:Right()
-            Up = ang:Up()
-            Forward = ang:Forward()
+            offset = self.IronSightsPosAfterShootingAdjustment
+            local right = ang:Right()
+            local up = ang:Up()
+            local forward = ang:Forward()
 
-            pos = pos + Offset.x * Right * mul
-            pos = pos + Offset.y * Forward * mul
-            pos = pos + Offset.z * Up * mul
+            pos = pos + offset.x * right * mul
+            pos = pos + offset.y * forward * mul
+            pos = pos + offset.z * up * mul
         end
     end
 
@@ -347,7 +354,6 @@ function SWEP:Reload()
     self:SetIronsights(false)
     self:SetBurstTime(0)
     self:SetBurstBulletNum(0)
-    self:SetHoldType(self.HoldType)
     self:GetOwner():SetAnimation(PLAYER_RELOAD)
     self:SetReloadEndTime(CurTime() + 2)
     self:SetTotalUsedMagCount(self:GetTotalUsedMagCount() + 1)
@@ -389,14 +395,16 @@ end
 -- Note that if you override Think in your SWEP, you should call
 -- BaseClass.Think(self) so as not to break ironsights
 function SWEP:Think()
-	self:CalcViewModel()
-    if self.Primary.ClipSize ~= -1 and not self:GetReloading() and not self:GetIronsights() and self:GetLastPrimaryAttack() + 1 < CurTime() and self:GetHoldType() == self.HoldType then
-        self:SetHoldType("normal")
+    self:CalcViewModel()
+    if self.Primary.ClipSize ~= -1 and not self:GetReloading() and not self:GetIronsights() and self:GetLastPrimaryAttack() + 1 < CurTime() and self:GetHoldType() == self.HoldType and GAMEMODE.Config.ironshoot then
+        self:SetHoldType(self.LoweredHoldType)
     end
     if self:GetReloadEndTime() ~= 0 and CurTime() >= self:GetReloadEndTime() then
         self:SetReloadEndTime(0)
         self:SetReloading(false)
-        self:SetHoldType("normal")
+        if GAMEMODE.Config.ironshoot then
+            self:SetHoldType(self.LoweredHoldType)
+        end
         if CLIENT then self.hasShot = false end
     end
     if self:GetBurstTime() ~= 0 and CurTime() >= self:GetBurstTime() then

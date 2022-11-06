@@ -27,9 +27,14 @@ function DarkRP.removePlayerGesture(anim)
 end
 
 local function physGunCheck(ply)
-    local hookName = "darkrp_anim_physgun_"..ply:EntIndex()
+    local hookName = "darkrp_anim_physgun_" .. ply:EntIndex()
     hook.Add("Think", hookName, function()
-        if IsValid(ply) and ply:Alive() and ply:GetActiveWeapon():IsValid() and ply:GetActiveWeapon():GetClass() == "weapon_physgun" and ply:KeyDown(IN_ATTACK) then
+        if IsValid(ply) and
+           ply:Alive() and
+           ply:GetActiveWeapon():IsValid() and
+           ply:GetActiveWeapon():GetClass() == "weapon_physgun" and
+           ply:KeyDown(IN_ATTACK) and
+           (ply:GetAllowWeaponsInVehicle() or not ply:InVehicle()) then
             local ent = ply:GetEyeTrace().Entity
             if IsValid(ent) and ent:IsPlayer() and not ply.SaidHi then
                 ply.SaidHi = true
@@ -67,6 +72,7 @@ hook.Add("KeyPress", "darkrp_animations", function(ply, key)
 end)
 
 if SERVER then
+    util.AddNetworkString( "DRP#_DarkRP_CustomAnim" )
     local function CustomAnim(ply, cmd, args)
         if ply:EntIndex() == 0 then return end
         local Gesture = tonumber(args[1] or 0)
@@ -75,32 +81,38 @@ if SERVER then
         local RP = RecipientFilter()
         RP:AddAllPlayers()
 
-        umsg.Start("_DarkRP_CustomAnim", RP)
-        umsg.Entity(ply)
-        umsg.Short(Gesture)
-        umsg.End()
+        net.Start( "DRP#_DarkRP_CustomAnim" )
+            net.WriteEntity( ply )
+            net.WriteInt( Gesture, 16 )
+        net.Send( RP )
     end
     concommand.Add("_DarkRP_DoAnimation", CustomAnim)
     return
 end
 
-local function KeysAnims(um)
-    local ply = um:ReadEntity()
-    local act = um:ReadString()
-
+local function KeysAnims( ply, act )
     if not IsValid(ply) then return end
     ply:AnimRestartGesture(GESTURE_SLOT_CUSTOM, act == "usekeys" and ACT_GMOD_GESTURE_ITEM_PLACE or ACT_HL2MP_GESTURE_RANGE_ATTACK_FIST, true)
 end
-usermessage.Hook("anim_keys", KeysAnims)
 
-local function CustomAnimation(um)
-    local ply = um:ReadEntity()
-    local act = um:ReadShort()
+net.Receive( "DRP#anim_keys", function()
+    local ply = net.ReadEntity()
+    local act = net.ReadString()
 
+    KeysAnims( ply, act )
+end )
+
+local function CustomAnimation( ply, act )
     if not IsValid(ply) then return end
     ply:AnimRestartGesture(GESTURE_SLOT_CUSTOM, act, true)
 end
-usermessage.Hook("_DarkRP_CustomAnim", CustomAnimation)
+
+net.Receive( "DRP#_DarkRP_CustomAnim", function()
+    local ply = net.ReadEntity()
+    local act = net.ReadInt( 16 )
+
+    CustomAnimation( ply, act )
+end )
 
 local AnimFrame
 local function AnimationMenu()

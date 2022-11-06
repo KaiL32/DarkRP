@@ -16,6 +16,8 @@ SWEP.ViewModelFOV = 62
 SWEP.ViewModelFlip = false
 SWEP.AnimPrefix = "stunstick"
 
+SWEP.UseHands = false
+
 SWEP.AdminOnly = true
 
 SWEP.StickColor = Color(255, 255, 255)
@@ -88,7 +90,6 @@ function SWEP:Deploy()
 end
 
 function SWEP:PreDrawViewModel(vm)
-    if not IsValid(vm) then return end
     for i = 9, 15 do
         vm:SetSubMaterial(i, "!darkrp/" .. self:GetClass())
     end

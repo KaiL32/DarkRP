@@ -3,7 +3,12 @@ AddCSLuaFile("shared.lua")
 include("shared.lua")
 
 function ENT:Initialize()
-    self.BaseClass.Initialize(self)
+    DarkRP.ValidatedPhysicsInit(self, SOLID_VPHYSICS)
+    self:SetMoveType(MOVETYPE_VPHYSICS)
+    self:SetSolid(SOLID_VPHYSICS)
+    self:SetUseType(SIMPLE_USE)
+    local phys = self:GetPhysicsObject()
+    phys:Wake()
 end
 
 function ENT:Use(activator, caller)
@@ -12,6 +17,8 @@ function ENT:Use(activator, caller)
         if reason then DarkRP.notify(activator, 1, 4, reason) end
         return
     end
+
+    hook.Call("playerPickedUpAmmo", nil, activator, self.amountGiven, self.ammoType, self)
 
     activator:GiveAmmo(self.amountGiven, self.ammoType)
     self:Remove()
@@ -36,3 +43,32 @@ function ENT:StartTouch(ent)
 
     ent:Remove()
 end
+
+DarkRP.hookStub{
+    name = "playerPickedUpAmmo",
+    description = "When a player picks up ammo.",
+    parameters = {
+        {
+            name = "ply",
+            description = "The player who picked up ammo.",
+            type = "Player"
+        },
+        {
+            name = "amount",
+            description = "Ammo amount.",
+            type = "number"
+        },
+        {
+            name = "type",
+            description = "Ammo type.",
+            type = "number"
+        },
+        {
+            name = "spawnedAmmo",
+            description = "Entity of spawned ammo.",
+            type = "Entity"
+        }
+    },
+    returns = {
+    },
+}

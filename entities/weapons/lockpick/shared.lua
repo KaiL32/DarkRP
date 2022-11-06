@@ -1,7 +1,7 @@
 AddCSLuaFile()
 
 if CLIENT then
-    SWEP.PrintName = "Lock Pick"
+    SWEP.PrintName = "Отмычка"
     SWEP.Slot = 5
     SWEP.SlotPos = 1
     SWEP.DrawAmmo = false
@@ -11,7 +11,7 @@ end
 -- Variables that are used on both client and server
 
 SWEP.Author = "DarkRP Developers"
-SWEP.Instructions = "Left or right click to pick a lock"
+SWEP.Instructions = "ЛКМ или ПКМ для взлома"
 SWEP.Contact = ""
 SWEP.Purpose = ""
 SWEP.IsDarkRPLockpick = true
@@ -39,6 +39,14 @@ SWEP.Secondary.DefaultClip = -1     -- Default number of bullets in a clip
 SWEP.Secondary.Automatic = false        -- Automatic/Semi Auto
 SWEP.Secondary.Ammo = ""
 
+--[[-------------------------------------------------------
+Name: SWEP:Initialize()
+Desc: Called when the weapon is first loaded
+---------------------------------------------------------]]
+function SWEP:Initialize()
+    self:SetHoldType("normal")
+end
+
 function SWEP:SetupDataTables()
     self:NetworkVar("Bool", 0, "IsLockpicking")
     self:NetworkVar("Float", 0, "LockpickStartTime")
@@ -48,19 +56,23 @@ function SWEP:SetupDataTables()
     self:NetworkVar("Entity", 0, "LockpickEnt")
 end
 
-function SWEP:Initialize()
-    self:SetHoldType("normal")
-end
-
+--[[-------------------------------------------------------
+Name: SWEP:PrimaryAttack()
+Desc: +attack1 has been pressed
+---------------------------------------------------------]]
 function SWEP:PrimaryAttack()
-    self:SetNextPrimaryFire(CurTime() + 0.5)
+    self:SetNextPrimaryFire(CurTime() + 2)
     if self:GetIsLockpicking() then return end
 
     self:GetOwner():LagCompensation(true)
     local trace = self:GetOwner():GetEyeTrace()
     self:GetOwner():LagCompensation(false)
     local ent = trace.Entity
-
+    if SERVER then
+        if ent:IsVehicle() then
+            ent:StartSignal()
+        end
+    end
     if not IsValid(ent) or ent.DarkRPCanLockpick == false then return end
     local canLockpick = hook.Call("canLockpick", nil, self:GetOwner(), ent, trace)
 
@@ -68,7 +80,7 @@ function SWEP:PrimaryAttack()
     if canLockpick ~= true and (
             trace.HitPos:DistToSqr(self:GetOwner():GetShootPos()) > 10000 or
             (not GAMEMODE.Config.canforcedooropen and ent:getKeysNonOwnable()) or
-            (not ent:isDoor() and not ent:IsVehicle() and not string.find(string.lower(ent:GetClass()), "vehicle") and (not GAMEMODE.Config.lockpickfading or not ent.isFadingDoor))
+            (not ent:isDoor() and not ent:IsVehicle() and not string.find( string.lower(ent:GetClass()), "keypad" ) and not string.find(string.lower(ent:GetClass()), "vehicle") and (not GAMEMODE.Config.lockpickfading or not ent.isFadingDoor))
         ) then
         return
     end
@@ -120,10 +132,29 @@ function SWEP:Succeed()
     local override = hook.Call("onLockpickCompleted", nil, self:GetOwner(), true, ent)
 
     if override then return end
-
+    if SERVER then
+        if ent:IsVehicle() then
+            if ent:getKeysDoorGroup() then
+                ent.lastowner = ent:getKeysDoorGroup()
+                ent:SetNWString( 'veh_lastowner', ent.lastowner )
+                ent:keysOwn( self.Owner )
+                ent:CPPISetOwner(world)
+            elseif ent:getDoorOwner() then
+                if ent:getDoorOwner() == self.Owner then return end
+                ent.lastowner = ent:getDoorOwner()
+                ent:SetNWString( 'veh_lastowner', ent.lastowner:Nick() )
+                ent:keysUnOwn( ent.lastowner )
+                ent:keysOwn( self.Owner )
+                 ent:CPPISetOwner(world)
+            end
+        end
+    end
     if ent.isFadingDoor and ent.fadeActivate and not ent.fadeActive then
         ent:fadeActivate()
-        if IsFirstTimePredicted() then timer.Simple(5, function() if IsValid(ent) and ent.fadeActive then ent:fadeDeactivate() end end) end
+    elseif string.find( ent:GetClass(), 'keypad' ) then
+
+        ent:Process( true )
+
     elseif ent.Fire then
         ent:keysUnLock()
         ent:Fire("open", "", .6)

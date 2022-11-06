@@ -21,6 +21,8 @@ GM.Config.voice3D                       = true
 GM.Config.AdminsCopWeapons              = true
 -- adminBypassJobCustomCheck - Enable/disable whether an admin can force set a job with whenever customCheck returns false.
 GM.Config.adminBypassJobRestrictions    = true
+-- Acts/Taunts - Enable/disable Taunts (e.g. act salute)
+GM.Config.allowActs                     = false
 -- allow people getting their own custom jobs.
 GM.Config.allowjobswitch                = true
 -- allowrpnames - Allow Players to Set their RP names using the /rpname command.
@@ -69,7 +71,7 @@ GM.Config.deadtalk                      = true
 GM.Config.deadvoice                     = true
 -- deathpov - Enable/disable whether people see their death in first person view.
 GM.Config.deathpov                      = false
--- decalcleaner - Enable/Disable clearing ever players decals.
+-- decalcleaner - Enable/Disable clearing every player's decals.
 GM.Config.decalcleaner                  = false
 -- disallowClientsideScripts - Clientside scripts can be very useful for customizing the HUD or to aid in building. This option bans those scripts.
 GM.Config.disallowClientsideScripts     = false
@@ -84,7 +86,7 @@ GM.Config.droppocketdeath               = true
 -- dropweapondeath - Enable/disable whether people drop their current weapon when they die.
 GM.Config.dropweapondeath               = false
 -- Whether players can drop the weapons they spawn with.
-GM.Config.dropspawnedweapons            = true
+GM.Config.dropspawnedweapons            = false
 -- dynamicvoice - Enable/disable whether only people in the same room as you can hear your mic.
 GM.Config.dynamicvoice                  = true
 -- earthquakes - Enable/disable earthquakes.
@@ -121,6 +123,8 @@ GM.Config.needwantedforarrest           = false
 GM.Config.noguns                        = false
 -- norespawn - Enable/Disable that people don't have to respawn when they change job.
 GM.Config.norespawn                     = true
+-- instantjob - Enable/Disable instantly respawning when norespawn is false
+GM.Config.instantjob                    = false
 -- npcarrest - Enable/disable arresting npc's.
 GM.Config.npcarrest                     = true
 -- ooc - Whether or not OOC tags are enabled.
@@ -159,6 +163,8 @@ GM.Config.unlockdoorsonstart            = false
 GM.Config.voiceradius                   = true
 -- tax - Whether players pay taxes on their wallets.
 GM.Config.wallettax                     = false
+-- wantedrespawn - Whether players remain wanted on respawn.
+GM.Config.wantedrespawn                 = false
 -- wantedsuicide - Enable/Disable suiciding while you are wanted by the police.
 GM.Config.wantedsuicide                 = false
 -- realisticfalldamage - Enable/Disable dynamic fall damage. Setting mp_falldamage to 1 will over-ride this.
@@ -266,6 +272,10 @@ GM.Config.shipmentspawntime             = 10
 GM.Config.startinghealth                = 100
 -- startingmoney - your wallet when you join for the first time.
 GM.Config.startingmoney                 = 500
+-- stunstickdamage - amount of damage the stunstick will do to entities.
+-- When between 0 and 1, the damage is relative, where 1 takes the entire health of the entity.
+-- When above 1, the damage is absolute
+GM.Config.stunstickdamage               = 1000
 -- vehiclecost - Sets the cost of a vehicle (To own it).
 GM.Config.vehiclecost                   = 40
 -- wallettaxmax - Maximum percentage of tax to be paid.
@@ -314,8 +324,11 @@ GM.Config.lockdownsound = "npc/overwatch/cityvoice/f_confirmcivilstatus_1_spkr.w
 GM.Config.DarkRPSkin = "DarkRP"
 GM.Config.currency = "$"
 GM.Config.chatCommandPrefix = "/"
-GM.Config.F1MenuHelpPage = "https://wiki.darkrp.com/index.php/Main_Page"
+GM.Config.F1MenuHelpPage = "https://darkrp.miraheze.org/wiki/Main_Page"
 GM.Config.F1MenuHelpPageTitle = "DarkRP Wiki"
+
+-- The sound that plays when you get a DarkRP notification
+GM.Config.notificationSound = "buttons/lightswitch2.wav"
 
 -- Put Steam ID's and ranks in this list, and the players will have that rank when they join.
 GM.Config.DefaultPlayerGroups = {

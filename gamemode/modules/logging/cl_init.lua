@@ -1,15 +1,18 @@
 --[[---------------------------------------------------------------------------
 Log a message to console
 ---------------------------------------------------------------------------]]
-local function AdminLog(um)
-    local colour = Color(um:ReadShort(), um:ReadShort(), um:ReadShort())
-    local text = DarkRP.deLocalise(um:ReadString() .. "\n")
-
+local function AdminLog( colour, text )
     MsgC(Color(255, 0, 0), "[" .. GAMEMODE.Name .. "] ", colour, text)
 
     hook.Call("DarkRPLogPrinted", nil, text, colour)
 end
-usermessage.Hook("DRPLogMsg", AdminLog)
+
+net.Receive( "DRP#DRPLogMsg", function()
+    local colour = Color( net.ReadInt( 9 ), net.ReadInt( 9 ), net.ReadInt( 9 ) )
+    local text = DarkRP.deLocalise( net.ReadString() .. "\n" )
+
+    AdminLog( colour, text )
+end )
 
 --[[---------------------------------------------------------------------------
 Interface

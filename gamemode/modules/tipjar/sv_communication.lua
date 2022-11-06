@@ -24,7 +24,7 @@ net.Receive("DarkRP_TipJarDonate", function(_, ply)
     end
 
     if not ply:canAfford(amount) then
-        DarkRP.notify(activator, 1, 4, DarkRP.getPhrase("cant_afford", amount))
+        DarkRP.notify(ply, 1, 4, DarkRP.getPhrase("cant_afford", amount))
         return
     end
 
@@ -41,8 +41,8 @@ net.Receive("DarkRP_TipJarDonate", function(_, ply)
 
     local strAmount = DarkRP.formatMoney(amount)
 
-    DarkRP.notify(ply,   3, 4, DarkRP.getPhrase("you_donated", strAmount, owner:Nick()))
-    DarkRP.notify(owner, 3, 4, DarkRP.getPhrase("has_donated", ply:Nick(),   strAmount))
+    DarkRP.notify(ply,   3, 4, DarkRP.getPhrase("you_donated", strAmount,  owner:Nick()))
+    DarkRP.notify(owner, 3, 4, DarkRP.getPhrase("has_donated", ply:Nick(), strAmount))
 
     net.Start("DarkRP_TipJarDonate")
         net.WriteEntity(tipjar)

@@ -1,3 +1,4 @@
+util.AddNetworkString( "DRP#AdminTell" )
 --[[---------------------------------------------------------------------------
 Messages
 ---------------------------------------------------------------------------]]
@@ -11,9 +12,9 @@ local function ccTell(ply, args)
             msg = msg .. args[n] .. " "
         end
 
-        umsg.Start("AdminTell", target)
-            umsg.String(msg)
-        umsg.End()
+        net.Start( "DRP#AdminTell" )
+            net.WriteString( msg )
+        net.Send( target )
 
         if ply:EntIndex() == 0 then
             DarkRP.log("Console did admintell \"" .. msg .. "\" on " .. target:SteamName(), Color(30, 30, 30))
@@ -27,9 +28,9 @@ end
 DarkRP.definePrivilegedChatCommand("admintell", "DarkRP_AdminCommands", ccTell)
 
 local function ccTellAll(ply, args)
-    umsg.Start("AdminTell")
-        umsg.String(args)
-    umsg.End()
+    net.Start( "DRP#AdminTell" )
+        net.WriteString( args )
+    net.Broadcast()
 
     if ply:EntIndex() == 0 then
         DarkRP.log("Console did admintellall \"" .. args .. "\"", Color(30, 30, 30))

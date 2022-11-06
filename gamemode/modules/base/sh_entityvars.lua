@@ -96,6 +96,14 @@ DarkRP.registerDarkRPVar("wanted",        net.WriteBit, fc{tobool, net.ReadBit})
 DarkRP.registerDarkRPVar("wantedReason",  net.WriteString, net.ReadString)
 DarkRP.registerDarkRPVar("agenda",        net.WriteString, net.ReadString)
 
+/*
+    RG
+*/
+
+DarkRP.registerDarkRPVar("rg_com", net.WriteString, net.ReadString)
+DarkRP.registerDarkRPVar("rg_log", net.WriteString, net.ReadString)
+DarkRP.registerDarkRPVar("rg_warn", net.WriteString, net.ReadString)
+
 --[[---------------------------------------------------------------------------
 RP name override
 ---------------------------------------------------------------------------]]

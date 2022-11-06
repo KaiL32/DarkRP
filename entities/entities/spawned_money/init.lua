@@ -25,8 +25,8 @@ function ENT:Use(activator, caller)
 
     local canUse, reason = hook.Call("canDarkRPUse", nil, activator, self, caller)
     if canUse == false then
-      if reason then DarkRP.notify(activator, 1, 4, reason) end
-      return
+        if reason then DarkRP.notify(activator, 1, 4, reason) end
+        return
     end
 
     self.USED = true
@@ -60,7 +60,7 @@ function ENT:StartTouch(ent)
 
     ent:Remove()
     self:Setamount(self:Getamount() + ent:Getamount())
-    if GAMEMODE.Config.moneyRemoveTime and  GAMEMODE.Config.moneyRemoveTime ~= 0 then
+    if GAMEMODE.Config.moneyRemoveTime and GAMEMODE.Config.moneyRemoveTime ~= 0 then
         timer.Adjust("RemoveEnt" .. self:EntIndex(), GAMEMODE.Config.moneyRemoveTime, 1, fn.Partial(SafeRemoveEntity, self))
     end
 end

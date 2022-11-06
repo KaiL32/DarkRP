@@ -18,6 +18,25 @@ function DarkRP.payPlayer(ply1, ply2, amount)
     ply2:addMoney(amount)
 end
 
+local function calc( ply )
+
+
+    local rep = tonumber(ply:GetNWInt( 'rg_rep', 0 ))
+
+    if rep >= 200 then
+        return 2080
+    end
+
+    if rep <= 0 then
+        return 80
+    end
+
+    return (rep / 0.1) + 80
+
+end
+
+
+
 function meta:payDay()
     if not self:isArrested() then
         DarkRP.retrieveSalary(self, function(amount)
@@ -28,6 +47,17 @@ function meta:payDay()
             if amount == 0 or not amount then
                 if not suppress then DarkRP.notify(self, 4, 4, message or DarkRP.getPhrase("payday_unemployed")) end
             else
+                if self:IsNRG() then
+                     if self:IsPremium() then
+                        self:rg_AddExp( 30 )
+                     else
+                        self:rg_AddExp( 10 )
+                     end
+                     self:addMoney( calc(self) )
+                     self:ChatAddText(Color(60,120,70),'[Штаб округа]',Color(255,255,255), ' Вы получили денежное довольствие в размере '..DarkRP.formatMoney( calc(self) ))
+                 else
+                     self:addMoney(amount)
+                 end
                 self:addMoney(amount)
                 if not suppress then DarkRP.notify(self, 4, 4, message or DarkRP.getPhrase("payday_message", DarkRP.formatMoney(amount))) end
             end
@@ -43,7 +73,7 @@ function DarkRP.createMoneyBag(pos, amount)
     moneybag:Setamount(math.Min(amount, 2147483647))
     moneybag:Spawn()
     moneybag:Activate()
-    if GAMEMODE.Config.moneyRemoveTime and  GAMEMODE.Config.moneyRemoveTime ~= 0 then
+    if GAMEMODE.Config.moneyRemoveTime and GAMEMODE.Config.moneyRemoveTime ~= 0 then
         timer.Create("RemoveEnt" .. moneybag:EntIndex(), GAMEMODE.Config.moneyRemoveTime, 1, fn.Partial(SafeRemoveEntity, moneybag))
     end
     return moneybag
@@ -267,7 +297,7 @@ local function ccSetMoney(ply, args)
     if ply:EntIndex() == 0 then
         DarkRP.log("Console set " .. target:SteamName() .. "'s money to " .. DarkRP.formatMoney(amount), Color(30, 30, 30))
     else
-        DarkRP.log(ply:Nick() .. " (" .. ply:SteamID() .. ") set " .. target:SteamName() .. "'s money to " ..  DarkRP.formatMoney(amount), Color(30, 30, 30))
+        DarkRP.log(ply:Nick() .. " (" .. ply:SteamID() .. ") set " .. target:SteamName() .. "'s money to " .. DarkRP.formatMoney(amount), Color(30, 30, 30))
     end
 end
 DarkRP.definePrivilegedChatCommand("setmoney", "DarkRP_SetMoney", ccSetMoney)

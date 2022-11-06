@@ -1,7 +1,6 @@
 AddCSLuaFile()
 
 if CLIENT then
-    SWEP.PrintName = "MP5"
     SWEP.Author = "DarkRP Developers"
     SWEP.Slot = 2
     SWEP.SlotPos = 0
@@ -12,6 +11,7 @@ end
 
 SWEP.Base = "weapon_cs_base2"
 
+SWEP.PrintName = "MP5"
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
 SWEP.Category = "DarkRP (Weapon)"
@@ -24,6 +24,7 @@ SWEP.AutoSwitchTo = false
 SWEP.AutoSwitchFrom = false
 
 SWEP.HoldType = "smg"
+SWEP.LoweredHoldType = "passive"
 
 SWEP.Primary.Sound = Sound("Weapon_MP5Navy.Single")
 SWEP.Primary.Recoil = 0.5

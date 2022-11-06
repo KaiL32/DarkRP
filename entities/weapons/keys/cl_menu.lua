@@ -58,9 +58,9 @@ local function openMenu(setDoorOwnerAccess, doorSettingsAccess)
     Frame:ParentToHUD()
 
     function Frame:Think()
-        local trace = LocalPlayer():GetEyeTrace()
-        local LAEnt = trace.Entity
-        if not IsValid(LAEnt) or not LAEnt:isKeysOwnable() or trace.HitPos:DistToSqr(LocalPlayer():EyePos()) > 40000 then
+        local tr = LocalPlayer():GetEyeTrace()
+        local LAEnt = tr.Entity
+        if not IsValid(LAEnt) or not LAEnt:isKeysOwnable() or tr.HitPos:DistToSqr(LocalPlayer():EyePos()) > 40000 then
             self:Close()
         end
         if not self.Dragging then return end
@@ -202,9 +202,12 @@ local function openMenu(setDoorOwnerAccess, doorSettingsAccess)
     Frame:SetSkin(GAMEMODE.Config.DarkRPSkin)
 end
 
-function DarkRP.openKeysMenu(um)
+function DarkRP.openKeysMenu()
     CAMI.PlayerHasAccess(LocalPlayer(), "DarkRP_SetDoorOwner", function(setDoorOwnerAccess)
         CAMI.PlayerHasAccess(LocalPlayer(), "DarkRP_ChangeDoorSettings", fp{openMenu, setDoorOwnerAccess})
     end)
 end
-usermessage.Hook("KeysMenu", DarkRP.openKeysMenu)
+
+net.Receive( "DRP#KeysMenu", function()
+    DarkRP.openKeysMenu()
+end )

@@ -73,6 +73,11 @@ local buyableSchema = fn.FAnd{baseSchema, tc.checkTable{
             tc.optional(isfunction),
             "The spawn must be a function."
         ),
+    allowPurchaseWhileDead =
+        tc.addHint(
+            tc.default(false),
+            "The allowPurchaseWhileDead must be either true or false"
+        )
 }}
 
 -- The command of an entity must be unique
@@ -190,7 +195,7 @@ DarkRP.validateJob = fn.FAnd{baseSchema, tc.checkTable{
         tc.addHint(
             tc.optional(tc.tableOf(isnumber)),
             "The ammo must be a table containing numbers.",
-            {"See example on http://wiki.darkrp.com/index.php/DarkRP:CustomJobFields"}
+            {"See example on https://darkrp.miraheze.org/wiki/DarkRP:CustomJobFields"}
         ),
 
     hasLicense =

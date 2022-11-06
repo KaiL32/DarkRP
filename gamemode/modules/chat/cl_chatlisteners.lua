@@ -1,5 +1,4 @@
---[[---------------------------------------------------------------------------
-This module finds out for you who can see you talk or speak through the microphone
+
 ---------------------------------------------------------------------------]]
 
 --[[---------------------------------------------------------------------------
@@ -13,7 +12,6 @@ local currentConfig = {text = "", hearFunc = fn.Id} -- Default config is not loa
 --[[---------------------------------------------------------------------------
 addChatReceiver
 Add a chat command with specific receivers
-
 prefix: the chat command itself ("/pm", "/ooc", "/me" are some examples)
 text: the text that shows up when it says "Some people can hear you X"
 hearFunc: a function(ply, splitText) that decides whether this player can or cannot hear you.
@@ -31,7 +29,6 @@ end
 --[[---------------------------------------------------------------------------
 removeChatReceiver
 Remove a chat command.
-
 prefix: the command, like in addChatReceiver
 ---------------------------------------------------------------------------]]
 function DarkRP.removeChatReceiver(prefix)
@@ -45,20 +42,25 @@ local function drawChatReceivers()
     if not receivers then return end
 
     local x, y = chat.GetChatBoxPos()
-    y = y - 21
+    y = y - 45
+
+    if LocalPlayer():GetNWBool( "gp_radio_translation", false ) == true then
+        draw.WordBox(2, x, y, "[РАЦИЯ]", "gpframe#title", Color(0,0,0,80), Color(255,255,255))
+        return
+    end
 
     local receiversCount = #receivers
     -- No one hears you
     if receiversCount == 0 then
-        draw.WordBox(2, x, y, DarkRP.getPhrase("hear_noone", currentConfig.text), "DarkRPHUD1", Color(0,0,0,160), Color(255,0,0,255))
+        draw.WordBox(2, x, y, DarkRP.getPhrase("hear_noone", currentConfig.text), "gpframe#title", Color(0,0,0,80), Color(255,0,0,255))
         return
     -- Everyone hears you
     elseif receiversCount == player.GetCount() - 1 then
-        draw.WordBox(2, x, y, DarkRP.getPhrase("hear_everyone"), "DarkRPHUD1", Color(0,0,0,160), Color(0,255,0,255))
+        draw.WordBox(2, x, y, DarkRP.getPhrase("hear_everyone"), "gpframe#title", Color(0,0,0,80), Color(0,255,0,255))
         return
     end
 
-    draw.WordBox(2, x, y - (receiversCount * 21), DarkRP.getPhrase("hear_certain_persons", currentConfig.text), "DarkRPHUD1", Color(0,0,0,160), Color(0,255,0,255))
+    draw.WordBox(2, x, y - (receiversCount * 21), DarkRP.getPhrase("hear_certain_persons", currentConfig.text), "gpframe#title", Color(0,0,0,80), Color(0,255,0,255))
     for i = 1, receiversCount, 1 do
         if not IsValid(receivers[i]) then
             receivers[i] = receivers[#receivers]
@@ -66,7 +68,7 @@ local function drawChatReceivers()
             continue
         end
 
-        draw.WordBox(2, x, y - (i - 1) * 21, receivers[i]:Nick(), "DarkRPHUD1", Color(0, 0, 0, 160), Color(255, 255, 255, 255))
+        draw.WordBox(2, x, y - (i - 1) * 21, receivers[i]:Nick(), "gpframe#title", Color(0, 0, 0, 80), color_white)
     end
 end
 

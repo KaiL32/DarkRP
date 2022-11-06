@@ -1,8 +1,9 @@
+util.AddNetworkString( "DRP#OnChangedTeam" )
 --[[---------------------------------------------------------------------------
 Functions
 ---------------------------------------------------------------------------]]
 local meta = FindMetaTable("Player")
-function meta:changeTeam(t, force, suppressNotification)
+function meta:changeTeam(t, force, suppressNotification, ignoreMaxMembers)
     local prevTeam = self:Team()
     local notify = suppressNotification and fn.Id or DarkRP.notify
     local notifyAll = suppressNotification and fn.Id or DarkRP.notifyAll
@@ -14,13 +15,13 @@ function meta:changeTeam(t, force, suppressNotification)
 
     local allowed, time = self:changeAllowed(t)
     if t ~= GAMEMODE.DefaultTeam and not allowed and not force then
-        local notif = time and DarkRP.getPhrase("have_to_wait",  math.ceil(time), "/job, " .. DarkRP.getPhrase("banned_or_demoted")) or DarkRP.getPhrase("unable", team.GetName(t), DarkRP.getPhrase("banned_or_demoted"))
+        local notif = time and DarkRP.getPhrase("have_to_wait", math.ceil(time), "/job, " .. DarkRP.getPhrase("banned_or_demoted")) or DarkRP.getPhrase("unable", team.GetName(t), DarkRP.getPhrase("banned_or_demoted"))
         notify(self, 1, 4, notif)
         return false
     end
 
     if self.LastJob and GAMEMODE.Config.changejobtime - (CurTime() - self.LastJob) >= 0 and not force then
-        notify(self, 1, 4, DarkRP.getPhrase("have_to_wait",  math.ceil(GAMEMODE.Config.changejobtime - (CurTime() - self.LastJob)), "/job"))
+        notify(self, 1, 4, DarkRP.getPhrase("have_to_wait", math.ceil(GAMEMODE.Config.changejobtime - (CurTime() - self.LastJob)), "/job"))
         return false
     end
 
@@ -52,10 +53,10 @@ function meta:changeTeam(t, force, suppressNotification)
     end
 
     if not force then
-        if type(TEAM.NeedToChangeFrom) == "number" and prevTeam ~= TEAM.NeedToChangeFrom then
+        if isnumber(TEAM.NeedToChangeFrom) and prevTeam ~= TEAM.NeedToChangeFrom then
             notify(self, 1,4, DarkRP.getPhrase("need_to_be_before", team.GetName(TEAM.NeedToChangeFrom), TEAM.name))
             return false
-        elseif type(TEAM.NeedToChangeFrom) == "table" and not table.HasValue(TEAM.NeedToChangeFrom, prevTeam) then
+        elseif istable(TEAM.NeedToChangeFrom) and not table.HasValue(TEAM.NeedToChangeFrom, prevTeam) then
             local teamnames = ""
             for _, b in pairs(TEAM.NeedToChangeFrom) do
                 teamnames = teamnames .. " or " .. team.GetName(b)
@@ -65,10 +66,11 @@ function meta:changeTeam(t, force, suppressNotification)
         end
         local max = TEAM.max
         local numPlayers = team.NumPlayers(t)
-        if max ~= 0 and -- No limit
+        if not ignoreMaxMembers and
+        self:IsPremium() == false and max ~= 0 and -- No limit -- No limit
         (max >= 1 and numPlayers >= max or -- absolute maximum
         max < 1 and (numPlayers + 1) / player.GetCount() > max) then -- fractional limit (in percentages)
-            notify(self, 1, 4,  DarkRP.getPhrase("team_limit_reached", TEAM.name))
+            notify(self, 1, 4, DarkRP.getPhrase("team_limit_reached", TEAM.name))
             return false
         end
     end
@@ -107,10 +109,12 @@ function meta:changeTeam(t, force, suppressNotification)
     self.LastJob = CurTime()
 
     if GAMEMODE.Config.removeclassitems then
+        -- Must not be ipairs, DarkRPEntities might have missing keys when
+        -- DarkRP.removeEntity is called.
         for _, v in pairs(DarkRPEntities) do
             if GAMEMODE.Config.preventClassItemRemoval[v.ent] then continue end
             if not v.allowed then continue end
-            if type(v.allowed) == "table" and (table.HasValue(v.allowed, t) or not table.HasValue(v.allowed, prevTeam)) then continue end
+            if istable(v.allowed) and (table.HasValue(v.allowed, t) or not table.HasValue(v.allowed, prevTeam)) then continue end
             for _, e in ipairs(ents.FindByClass(v.ent)) do
                 if e.SID == self.SID then e:Remove() end
             end
@@ -118,23 +122,26 @@ function meta:changeTeam(t, force, suppressNotification)
 
         if not GAMEMODE.Config.preventClassItemRemoval["spawned_shipment"] then
             for _, v in ipairs(ents.FindByClass("spawned_shipment")) do
-                if v.allowed and type(v.allowed) == "table" and table.HasValue(v.allowed, t) then continue end
+                if v.allowed and istable(v.allowed) and table.HasValue(v.allowed, t) then continue end
                 if v.SID == self.SID then v:Remove() end
             end
         end
     end
 
     if isMayor then
-        for _, ent in pairs(self.lawboards or {}) do
+        for _, ent in ipairs(self.lawboards or {}) do
             if IsValid(ent) then
                 ent:Remove()
             end
         end
+        self.lawboards = {}
     end
 
     if isMayor and GAMEMODE.Config.shouldResetLaws then
         DarkRP.resetLaws()
     end
+
+    local DoEffect = false
 
     self:SetTeam(t)
     hook.Call("OnPlayerChangedTeam", GAMEMODE, self, prevTeam, t)
@@ -143,6 +150,25 @@ function meta:changeTeam(t, force, suppressNotification)
     if GAMEMODE.Config.norespawn and self:Alive() then
         self:StripWeapons()
         self:RemoveAllAmmo()
+
+        DoEffect = true
+        player_manager.SetPlayerClass(self, TEAM.playerClass or "player_darkrp")
+        self:applyPlayerClassVars(false)
+        gamemode.Call("PlayerSetModel", self)
+        gamemode.Call("PlayerLoadout", self)
+    else
+        if GAMEMODE.Config.instantjob then
+            DoEffect = true
+
+            self:StripWeapons()
+            self:RemoveAllAmmo()
+            self:Spawn()
+        else
+            self:KillSilent()
+        end
+    end
+
+    if DoEffect then
         local vPoint = self:GetShootPos() + Vector(0,0,50)
         local effectdata = EffectData()
         effectdata:SetEntity(self)
@@ -150,18 +176,12 @@ function meta:changeTeam(t, force, suppressNotification)
         effectdata:SetOrigin(vPoint)
         effectdata:SetScale(1)
         util.Effect("entity_remove", effectdata)
-        player_manager.SetPlayerClass(self, TEAM.playerClass or "player_darkrp")
-        self:applyPlayerClassVars(false)
-        gamemode.Call("PlayerSetModel", self)
-        gamemode.Call("PlayerLoadout", self)
-    else
-        self:KillSilent()
     end
 
-    umsg.Start("OnChangedTeam", self)
-        umsg.Short(prevTeam)
-        umsg.Short(t)
-    umsg.End()
+    net.Start( "DRP#OnChangedTeam" )
+        net.WriteInt( prevTeam, 10 )
+        net.WriteInt( t, 10 )
+    net.Send( self )
     return true
 end
 
@@ -169,8 +189,13 @@ function meta:updateJob(job)
     self:setDarkRPVar("job", job)
     self.LastJob = CurTime()
 
-    timer.Create(self:SteamID64() .. "jobtimer", GAMEMODE.Config.paydelay, 0, function()
-        if not IsValid(self) then return end
+    local timerid = self:SteamID64() .. "jobtimer"
+
+    timer.Create(timerid, GAMEMODE.Config.paydelay, 0, function()
+        if not IsValid(self) then
+            timer.Remove(timerid)
+            return
+        end
         self:payDay()
     end)
 end
@@ -277,6 +302,10 @@ local function FinishDemote(vote, choice)
 end
 
 local function Demote(ply, args)
+    if #args == 0 then
+        DarkRP.notify(ply, 1, 4, DarkRP.getPhrase("unable", "/demote", ""))
+        return ""
+    end
     if #args == 1 then
         DarkRP.notify(ply, 1, 4, DarkRP.getPhrase("vote_specify_reason"))
         return ""
@@ -300,7 +329,7 @@ local function Demote(ply, args)
     end
 
     if not p then
-        DarkRP.notify(ply, 1, 4, DarkRP.getPhrase("could_not_find", tostring(args)))
+        DarkRP.notify(ply, 1, 4, DarkRP.getPhrase("could_not_find", args and args[1]))
         return ""
     end
 
@@ -346,8 +375,8 @@ local function ExecSwitchJob(answer, ent, ply, target)
     local Pteam = ply:Team()
     local Tteam = target:Team()
 
-    if not ply:changeTeam(Tteam) then return end
-    if not target:changeTeam(Pteam) then
+    if not ply:changeTeam(Tteam, nil, nil, true) then return end
+    if not target:changeTeam(Pteam, nil, nil, true) then
         ply:changeTeam(Pteam, true) -- revert job change
         return
     end
@@ -363,12 +392,19 @@ local function SwitchJob(ply) --Idea by Godness.
     local eyetrace = ply:GetEyeTrace()
     local ent = eyetrace.Entity
 
-    if not IsValid(ent) or not ent:IsPlayer() then return "" end
+    if not IsValid(ent) or not ent:IsPlayer() then
+        DarkRP.notify(ply, 1, 4, DarkRP.getPhrase("unable", DarkRP.getPhrase("switch_jobs"), ""))
+        return ""
+    end
 
     local team1 = RPExtraTeams[ply:Team()]
     local team2 = RPExtraTeams[ent:Team()]
 
     if not team1 or not team2 then return "" end
+    if team1 == team2 then
+        DarkRP.notify(ply, 1, 4, DarkRP.getPhrase("unable", DarkRP.getPhrase("switch_jobs"), ""))
+        return ""
+    end
     if team1.customCheck and not team1.customCheck(ent) or team2.customCheck and not team2.customCheck(ply) then
         -- notify only the player trying to switch
         DarkRP.notify(ply, 1, 4, DarkRP.getPhrase("unable", DarkRP.getPhrase("switch_jobs"), ""))
@@ -425,7 +461,7 @@ local function DoTeamBan(ply, args)
     else
         nick = ply:Nick()
     end
-    DarkRP.notifyAll(0, 5, DarkRP.getPhrase("x_teambanned_y_for_z", nick, target:Nick(), team.GetName(tonumber(Team)), time/60))
+    DarkRP.notifyAll(0, 5, DarkRP.getPhrase("x_teambanned_y_for_z", nick, target:Nick(), team.GetName(tonumber(Team)), time / 60))
 end
 DarkRP.definePrivilegedChatCommand("teamban", "DarkRP_AdminCommands", DoTeamBan)
 
@@ -446,7 +482,7 @@ local function DoTeamUnBan(ply, args)
 
     local found = false
     for k, v in pairs(RPExtraTeams) do
-        if string.lower(v.name) == string.lower(Team) or  string.lower(v.command) == string.lower(Team) then
+        if string.lower(v.name) == string.lower(Team) or string.lower(v.command) == string.lower(Team) then
             Team = k
             found = true
             break

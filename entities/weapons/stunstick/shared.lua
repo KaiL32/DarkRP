@@ -1,7 +1,6 @@
 AddCSLuaFile()
 
 if CLIENT then
-    SWEP.PrintName = "Stun Stick"
     SWEP.Slot = 0
     SWEP.SlotPos = 5
     SWEP.RenderGroup = RENDERGROUP_BOTH
@@ -19,6 +18,7 @@ DEFINE_BASECLASS("stick_base")
 SWEP.Instructions = "Left click to discipline\nRight click to kill\nHold reload to threaten"
 SWEP.IsDarkRPStunstick = true
 
+SWEP.PrintName = "Stun Stick"
 SWEP.Spawnable = true
 SWEP.Category = "DarkRP (Utility)"
 
@@ -54,9 +54,11 @@ function SWEP:Think()
     if self.WaitingForAttackEffect and self:GetSeqIdleTime() ~= 0 and CurTime() >= self:GetSeqIdleTime() - 0.35 then
         self.WaitingForAttackEffect = false
 
+        local Owner = self:GetOwner()
+
         local effectData = EffectData()
-        effectData:SetOrigin(self:GetOwner():GetShootPos() + (self:GetOwner():EyeAngles():Forward() * 45))
-        effectData:SetNormal(self:GetOwner():EyeAngles():Forward())
+        effectData:SetOrigin(Owner:GetShootPos() + (Owner:EyeAngles():Forward() * 45))
+        effectData:SetNormal(Owner:EyeAngles():Forward())
         util.Effect("StunstickImpact", effectData)
     end
 end
@@ -106,27 +108,31 @@ local entMeta = FindMetaTable("Entity")
 function SWEP:DoAttack(dmg)
     if CLIENT then return end
 
-    self:GetOwner():LagCompensation(true)
-    local trace = util.QuickTrace(self:GetOwner():EyePos(), self:GetOwner():GetAimVector() * 90, {self:GetOwner()})
-    self:GetOwner():LagCompensation(false)
+    local Owner = self:GetOwner()
+
+    if not IsValid(Owner) then return end
+
+    Owner:LagCompensation(true)
+    local trace = util.QuickTrace(Owner:EyePos(), Owner:GetAimVector() * 90, {Owner})
+    Owner:LagCompensation(false)
 
     local ent = trace.Entity
     if IsValid(ent) and ent.onStunStickUsed then
-        ent:onStunStickUsed(self:GetOwner())
+        ent:onStunStickUsed(Owner)
         return
     elseif IsValid(ent) and ent:GetClass() == "func_breakable_surf" then
         ent:Fire("Shatter")
-        self:GetOwner():EmitSound(self.Hit[math.random(#self.Hit)])
+        Owner:EmitSound(self.Hit[math.random(#self.Hit)])
         return
     end
 
     self.WaitingForAttackEffect = true
 
-    local ent = self:GetOwner():getEyeSightHitEntity(
+    ent = Owner:getEyeSightHitEntity(
         self.stickRange,
         15,
         fn.FAnd{
-            fp{fn.Neq, self:GetOwner()},
+            fp{fn.Neq, Owner},
             fc{IsValid, entMeta.GetPhysicsObject},
             entMeta.IsSolid
         }
@@ -136,27 +142,33 @@ function SWEP:DoAttack(dmg)
     if ent:IsPlayer() and not ent:Alive() then return end
 
     if not ent:isDoor() then
-        ent:SetVelocity((ent:GetPos() - self:GetOwner():GetPos()) * 7)
+        ent:SetVelocity((ent:GetPos() - Owner:GetPos()) * 7)
     end
 
     if dmg > 0 then
-        ent:TakeDamage(dmg, self:GetOwner(), self)
+        ent:TakeDamage(dmg, Owner, self)
     end
 
     if ent:IsPlayer() or ent:IsNPC() or ent:IsVehicle() then
         self:DoFlash(ent)
-        self:GetOwner():EmitSound(self.FleshHit[math.random(#self.FleshHit)])
+        Owner:EmitSound(self.FleshHit[math.random(#self.FleshHit)])
     else
-        self:GetOwner():EmitSound(self.Hit[math.random(#self.Hit)])
-        if FPP and FPP.plyCanTouchEnt(self:GetOwner(), ent, "EntityDamage") then
-            if ent.SeizeReward and not ent.beenSeized and not ent.burningup and self:GetOwner():isCP() and ent.Getowning_ent and self:GetOwner() ~= ent:Getowning_ent() then
-                local amount = isfunction(ent.SeizeReward) and ent:SeizeReward(self:GetOwner(), dmg) or ent.SeizeReward
+        Owner:EmitSound(self.Hit[math.random(#self.Hit)])
+        if FPP and FPP.plyCanTouchEnt(Owner, ent, "EntityDamage") then
+            if ent.SeizeReward and not ent.beenSeized and not ent.burningup and Owner:isCP() and ent.Getowning_ent and Owner ~= ent:Getowning_ent() then
+                local amount = isfunction(ent.SeizeReward) and ent:SeizeReward(Owner, dmg) or ent.SeizeReward
 
-                self:GetOwner():addMoney(amount)
-                DarkRP.notify(self:GetOwner(), 1, 4, DarkRP.getPhrase("you_received_x", DarkRP.formatMoney(amount), DarkRP.getPhrase("bonus_destroying_entity")))
+                Owner:addMoney(amount)
+                DarkRP.notify(Owner, 1, 4, DarkRP.getPhrase("you_received_x", DarkRP.formatMoney(amount), DarkRP.getPhrase("bonus_destroying_entity")))
                 ent.beenSeized = true
             end
-            ent:TakeDamage(1000-dmg, self:GetOwner(), self) -- for illegal entities
+            local health = math.max(ent:Health(), ent:GetMaxHealth())
+            health = health == 0 and 1000 or health
+
+            local dmgToTake = GAMEMODE.Config.stunstickdamage <= 1 and GAMEMODE.Config.stunstickdamage * health or GAMEMODE.Config.stunstickdamage
+            -- Ceil because health is an integer value
+            dmgToTake = math.max(0, math.ceil(dmgToTake - dmg))
+            ent:TakeDamage(dmgToTake, Owner, self) -- for illegal entities
         end
     end
 end

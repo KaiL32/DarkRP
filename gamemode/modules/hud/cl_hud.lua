@@ -1,3 +1,5 @@
+/*
+
 --[[---------------------------------------------------------------------------
 HUD ConVars
 ---------------------------------------------------------------------------]]
@@ -66,7 +68,7 @@ local function ReloadConVars()
     end
 
 
-    HUDWidth = (GetConVar("HudW") or  CreateClientConVar("HudW", 240, true, false)):GetInt()
+    HUDWidth =  (GetConVar("HudW") or CreateClientConVar("HudW", 240, true, false)):GetInt()
     HUDHeight = (GetConVar("HudH") or CreateClientConVar("HudH", 115, true, false)):GetInt()
 
     if not cvars.GetConVarCallbacks("HudW", false) and not cvars.GetConVarCallbacks("HudH", false) then
@@ -198,9 +200,9 @@ end
 
 local Arrested = function() end
 
-usermessage.Hook("GotArrested", function(msg)
+net.Receive( "DRP#GotArrested", function()
     local StartArrested = CurTime()
-    local ArrestedUntil = msg:ReadFloat()
+    local ArrestedUntil = net.ReadFloat()
 
     Arrested = function()
         local shouldDraw = hook.Call("HUDShouldDraw", GAMEMODE, "DarkRP_ArrestedHUD")
@@ -216,9 +218,9 @@ end)
 
 local AdminTell = function() end
 
-usermessage.Hook("AdminTell", function(msg)
+net.Receive( "DRP#AdminTell", function()
     timer.Remove("DarkRP_AdminTell")
-    local Message = msg:ReadString()
+    local Message = net.ReadString()
 
     AdminTell = function()
         draw.RoundedBox(4, 10, 10, Scrw - 20, 110, colors.darkblack)
@@ -331,7 +333,7 @@ local function DrawEntityDisplay()
     local shootPos = localplayer:GetShootPos()
     local aimVec = localplayer:GetAimVector()
 
-    for _, ply in pairs(players or player.GetAll()) do
+    for _, ply in ipairs(players or player.GetAll()) do
         if not IsValid(ply) or ply == localplayer or not ply:Alive() or ply:GetNoDraw() or ply:IsDormant() then continue end
         local hisPos = ply:GetShootPos()
         if ply:getDarkRPVar("wanted") then ply:drawWantedInfo() end
@@ -344,16 +346,23 @@ local function DrawEntityDisplay()
             local unitPos = pos:GetNormalized()
             if unitPos:Dot(aimVec) > 0.95 then
                 local trace = util.QuickTrace(shootPos, pos, localplayer)
-                if trace.Hit and trace.Entity ~= ply then break end
+                if trace.Hit and trace.Entity ~= ply then
+                    -- When the trace says you're directly looking at a
+                    -- different player, that means you can draw /their/ info
+                    if trace.Entity:IsPlayer() then
+                        trace.Entity:drawPlayerInfo()
+                    end
+                    break
+                end
                 ply:drawPlayerInfo()
             end
         end
     end
 
-    local tr = localplayer:GetEyeTrace()
+    local ent = localplayer:GetEyeTrace().Entity
 
-    if IsValid(tr.Entity) and tr.Entity:isKeysOwnable() and tr.Entity:GetPos():DistToSqr(localplayer:GetPos()) < 40000 then
-        tr.Entity:drawOwnableInfo()
+    if IsValid(ent) and ent:isKeysOwnable() and ent:GetPos():DistToSqr(localplayer:GetPos()) < 40000 then
+        ent:drawOwnableInfo()
     end
 end
 
@@ -368,25 +377,34 @@ end
 --[[---------------------------------------------------------------------------
 Display notifications
 ---------------------------------------------------------------------------]]
-local function DisplayNotify(msg)
-    local txt = msg:ReadString()
-    GAMEMODE:AddNotify(txt, msg:ReadShort(), msg:ReadLong())
-    surface.PlaySound("buttons/lightswitch2.wav")
+local notificationSound = GM.Config.notificationSound
+local function DisplayNotify( txt, type, len )
+    GAMEMODE:AddNotify(txt, type, len)
+    surface.PlaySound(notificationSound)
 
     -- Log to client console
     MsgC(Color(255, 20, 20, 255), "[DarkRP] ", Color(200, 200, 200, 255), txt, "\n")
 end
-usermessage.Hook("_Notify", DisplayNotify)
+net.Receive( "DRP#_Notify", function()
+    local txt = net.ReadString()
+    local type = net.ReadInt( 16 )
+    local len = net.ReadInt( 20 )
+
+    DisplayNotify( txt, type, len )
+end )
 
 --[[---------------------------------------------------------------------------
 Remove some elements from the HUD in favour of the DarkRP HUD
 ---------------------------------------------------------------------------]]
+local noDraw = {
+    ["CHudHealth"] = true,
+    ["CHudBattery"] = true,
+    ["CHudSuitPower"] = true,
+    ["CHUDQuickInfo"] = true
+}
 function GM:HUDShouldDraw(name)
-    if name == "CHudHealth" or
-        name == "CHudBattery" or
-        name == "CHudSuitPower" or
-        (HelpToggled and name == "CHudChat") then
-            return false
+    if noDraw[name] or (HelpToggled and name == "CHudChat") then
+        return false
     else
         return self.Sandbox.HUDShouldDraw(self, name)
     end
@@ -403,11 +421,27 @@ end
 Actual HUDPaint hook
 ---------------------------------------------------------------------------]]
 function GM:HUDPaint()
-    localplayer = localplayer and IsValid(localplayer) and localplayer or LocalPlayer()
-    if not IsValid(localplayer) then return end
+    localplayer = localplayer or LocalPlayer()
 
     DrawHUD()
     DrawEntityDisplay()
 
     self.Sandbox.HUDPaint(self)
 end
+*/
+
+local notificationSound = GM.Config.notificationSound
+local function DisplayNotify( txt, type, len )
+    GAMEMODE:AddNotify(txt, type, len)
+    surface.PlaySound(notificationSound)
+
+    MsgC(Color(255, 20, 20, 255), "[DarkRP] ", Color(200, 200, 200, 255), txt, "\n")
+end
+
+net.Receive( "DRP#_Notify", function()
+    local txt = net.ReadString()
+    local type = net.ReadInt( 16 )
+    local len = net.ReadInt( 20 )
+
+    DisplayNotify( txt, type, len )
+end )

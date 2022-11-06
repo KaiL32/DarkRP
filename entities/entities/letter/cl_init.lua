@@ -7,30 +7,21 @@ function ENT:Draw()
     self:DrawModel()
 end
 
-local function KillLetter(msg)
+local function KillLetter()
     hook.Remove("HUDPaint", "ShowLetter")
     frame:Remove()
 end
-usermessage.Hook("KillLetter", KillLetter)
+net.Receive( "DRP#KillLetter", KillLetter )
 
-local function ShowLetter(msg)
+local function ShowLetter( LetterMsg, Letter, LetterType, LetterPos, sectionCount )
     if frame then
         frame:Remove()
     end
 
-    local LetterMsg = ""
-    local Letter = msg:ReadEntity()
-    local LetterType = msg:ReadShort()
-    local LetterPos = msg:ReadVector()
-    local sectionCount = msg:ReadShort()
     local LetterY = ScrH() / 2 - 300
     local LetterAlpha = 255
 
     Letter:CallOnRemove("Kill letter HUD on remove", KillLetter)
-
-    for k = 1, sectionCount, 1 do
-        LetterMsg = LetterMsg .. msg:ReadString()
-    end
 
     frame = vgui.Create("DFrame")
     frame:SetTitle("")
@@ -73,4 +64,15 @@ local function ShowLetter(msg)
         end
     end)
 end
-usermessage.Hook("ShowLetter", ShowLetter)
+net.Receive( "DRP#ShowLetter", function()
+    local LetterMsg
+    local Letter = net.ReadEntity()
+    local LetterType = net.ReadInt( 16 )
+    local LetterPos = net.ReadVector()
+    local sectionCount = net.ReadInt( 16 )
+    for k = 1, sectionCount, 1 do
+        LetterMsg = LetterMsg .. net.ReadString()
+    end
+
+    ShowLetter( LetterMsg, Letter, LetterType, LetterPos, sectionCount )
+end )

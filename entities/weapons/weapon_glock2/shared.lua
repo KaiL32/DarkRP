@@ -2,7 +2,6 @@ AddCSLuaFile()
 
 if CLIENT then
     SWEP.Author = "DarkRP Developers"
-    SWEP.PrintName = "Glock"
     SWEP.Instructions = "Shoot with it"
     SWEP.Slot = 1
     SWEP.SlotPos = 0
@@ -13,6 +12,7 @@ end
 
 SWEP.Base = "weapon_cs_base2"
 
+SWEP.PrintName = "Glock"
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
 SWEP.Category = "DarkRP (Weapon)"
@@ -20,6 +20,7 @@ SWEP.Category = "DarkRP (Weapon)"
 SWEP.ViewModel = "models/weapons/cstrike/c_pist_glock18.mdl"
 SWEP.WorldModel = "models/weapons/w_pist_glock18.mdl"
 SWEP.HoldType = "pistol"
+SWEP.LoweredHoldType = "normal"
 
 SWEP.Weight = 5
 SWEP.AutoSwitchTo = false

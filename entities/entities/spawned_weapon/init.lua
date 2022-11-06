@@ -33,7 +33,7 @@ function ENT:OnTakeDamage(dmg)
 end
 
 function ENT:Use(activator, caller)
-    if type(self.PlayerUse) == "function" then
+    if isfunction(self.PlayerUse) then
         local val = self:PlayerUse(activator, caller)
         if val ~= nil then return val end
     elseif self.PlayerUse ~= nil then
@@ -54,17 +54,38 @@ function ENT:Use(activator, caller)
 
     local CanPickup = hook.Call("PlayerCanPickupWeapon", GAMEMODE, activator, weapon)
     local ShouldntContinue = hook.Call("PlayerPickupDarkRPWeapon", nil, activator, self, weapon)
-    if not CanPickup or ShouldntContinue then return end
+    if not CanPickup or ShouldntContinue then
+        weapon:Remove()
+        return
+    end
 
-    -- Store ammo count before weapon pickup
-    local primaryAmmoType = weapon:GetPrimaryAmmoType()
-    local secondaryAmmoType = weapon:GetSecondaryAmmoType()
     weapon:Remove()
 
     weapon = activator:Give(class, true)
 
+    -- The player already had the weapon when the result of :Give() is not a
+    -- valid weapon
+    local activatorHadWeapon = not weapon:IsValid()
+    weapon = activatorHadWeapon and activator:GetWeapon(class) or weapon
+
+    hook.Call("playerPickedUpWeapon", nil, activator, self, weapon)
+
+    self:GivePlayerAmmo(activator, weapon, activatorHadWeapon)
+
+    self:DecreaseAmount()
+end
+
+function ENT:GivePlayerAmmo(ply, weapon, playerHadWeapon)
+    local primaryAmmoType = weapon:GetPrimaryAmmoType()
+    local secondaryAmmoType = weapon:GetSecondaryAmmoType()
     local clip1, clip2 = self.clip1, self.clip2
-    if weapon:IsValid() then
+
+    if playerHadWeapon then
+        if clip2 and clip2 > 0 and weapon:Clip2() ~= -1 then
+            weapon:SetClip2(weapon:Clip2() + clip2)
+            clip2 = 0
+        end
+    else
         if clip1 and clip1 ~= -1 and weapon:Clip1() ~= -1 then
             weapon:SetClip1(clip1)
             clip1 = 0
@@ -73,26 +94,18 @@ function ENT:Use(activator, caller)
             weapon:SetClip2(self.clip2)
             clip2 = 0
         end
-    else
-        weapon = activator:GetWeapon(class)
-        if clip2 and clip2 > 0 and weapon:Clip2() ~= -1 then
-            weapon:SetClip2(weapon:Clip2() + clip2)
-            clip2 = 0
-        end
     end
 
     if primaryAmmoType > 0 then
-        local primAmmo = activator:GetAmmoCount(primaryAmmoType)
+        local primAmmo = ply:GetAmmoCount(primaryAmmoType)
         primAmmo = primAmmo + (self.ammoadd or 0) + (clip1 or 0) -- Gets rid of any ammo given during weapon pickup
-        activator:SetAmmo(primAmmo, primaryAmmoType)
+        ply:SetAmmo(primAmmo, primaryAmmoType)
     end
 
     if secondaryAmmoType > 0 then
-        local secAmmo = activator:GetAmmoCount(secondaryAmmoType) + (clip2 or 0)
-        activator:SetAmmo(secAmmo, secondaryAmmoType)
+        local secAmmo = ply:GetAmmoCount(secondaryAmmoType) + (clip2 or 0)
+        ply:SetAmmo(secAmmo, secondaryAmmoType)
     end
-
-    self:DecreaseAmount()
 end
 
 function ENT:StartTouch(ent)
@@ -124,3 +137,27 @@ function ENT:StartTouch(ent)
     self:Setamount(totalAmount)
     ent:Remove()
 end
+
+DarkRP.hookStub{
+    name = "playerPickedUpWeapon",
+    description = "When a player picks up a weapon.",
+    parameters = {
+        {
+            name = "player",
+            description = "The player who picks up the weapon.",
+            type = "Player"
+        },
+        {
+            name = "entity",
+            description = "Entity of spawned weapon.",
+            type = "Entity"
+        },
+        {
+            name = "weapon",
+            description = "The weapon entity that the player is holding after picking up the weapon.",
+            type = "Weapon"
+        }
+    },
+    returns = {
+    },
+}

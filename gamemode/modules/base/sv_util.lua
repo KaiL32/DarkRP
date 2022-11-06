@@ -1,3 +1,4 @@
+util.AddNetworkString( "DRP#_Notify" )
 function DarkRP.notify(ply, msgtype, len, msg)
     if not istable(ply) then
         if not IsValid(ply) then
@@ -16,21 +17,21 @@ function DarkRP.notify(ply, msgtype, len, msg)
 
     if hook.Run("onNotify", rcp:GetPlayers(), msgtype, len, msg) == true then return end
 
-    umsg.Start("_Notify", rcp)
-        umsg.String(msg)
-        umsg.Short(msgtype)
-        umsg.Long(len)
-    umsg.End()
+    net.Start( "DRP#_Notify" )
+        net.WriteString( msg )
+        net.WriteInt( msgtype, 16 )
+        net.WriteInt( len, 20 )
+    net.Send( rcp )
 end
 
 function DarkRP.notifyAll(msgtype, len, msg)
     if hook.Run("onNotify", player.GetAll(), msgtype, len, msg) == true then return end
 
-    umsg.Start("_Notify")
-        umsg.String(msg)
-        umsg.Short(msgtype)
-        umsg.Long(len)
-    umsg.End()
+    net.Start( "DRP#_Notify" )
+        net.WriteString( msg )
+        net.WriteInt( msgtype, 16 )
+        net.WriteInt( len, 20 )
+    net.Broadcast()
 end
 
 function DarkRP.printMessageAll(msgtype, msg)
@@ -50,12 +51,15 @@ end
 util.AddNetworkString("DarkRP_Chat")
 
 function DarkRP.talkToRange(ply, PlayerName, Message, size)
-    local ents = ents.FindInSphere(ply:EyePos(), size)
+    local ents = player.GetHumans()
     local col = team.GetColor(ply:Team())
     local filter = {}
 
+    local plyPos = ply:EyePos()
+    local sizeSqr = size * size
+
     for _, v in ipairs(ents) do
-        if v:IsPlayer() then
+        if (v:EyePos():DistToSqr(plyPos) <= sizeSqr) and (v == ply or hook.Run("PlayerCanSeePlayersChat", PlayerName .. ": " .. Message, false, v, ply) ~= false) then
             table.insert(filter, v)
         end
     end
@@ -76,21 +80,27 @@ function DarkRP.talkToRange(ply, PlayerName, Message, size)
 end
 
 function DarkRP.talkToPerson(receiver, col1, text1, col2, text2, sender)
-    net.Start("DarkRP_Chat")
-        net.WriteUInt(col1.r, 8)
-        net.WriteUInt(col1.g, 8)
-        net.WriteUInt(col1.b, 8)
-        net.WriteString(text1)
+    if not IsValid(receiver) then return end
+    if receiver:IsBot() then return end
+    local concatenatedText = (text1 or "") .. ": " .. (text2 or "")
 
-        sender = sender or Entity(0)
-        net.WriteEntity(sender)
+    if sender == receiver or hook.Run("PlayerCanSeePlayersChat", concatenatedText, false, receiver, sender) ~= false then
+        net.Start("DarkRP_Chat")
+            net.WriteUInt(col1.r, 8)
+            net.WriteUInt(col1.g, 8)
+            net.WriteUInt(col1.b, 8)
+            net.WriteString(text1)
 
-        col2 = col2 or Color(0, 0, 0)
-        net.WriteUInt(col2.r, 8)
-        net.WriteUInt(col2.g, 8)
-        net.WriteUInt(col2.b, 8)
-        net.WriteString(text2 or "")
-    net.Send(receiver)
+            sender = sender or Entity(0)
+            net.WriteEntity(sender)
+
+            col2 = col2 or Color(0, 0, 0)
+            net.WriteUInt(col2.r, 8)
+            net.WriteUInt(col2.g, 8)
+            net.WriteUInt(col2.b, 8)
+            net.WriteString(text2 or "")
+        net.Send(receiver)
+    end
 end
 
 function DarkRP.isEmpty(vector, ignore)

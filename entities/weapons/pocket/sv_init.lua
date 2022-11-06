@@ -105,6 +105,40 @@ DarkRP.hookStub{
 }
 
 DarkRP.hookStub{
+    name = "canDropPocketItem",
+    description = "Whether someone is allowed to drop something from their pocket.",
+    parameters = {
+        {
+            name = "ply",
+            description = "The pocket holder.",
+            type = "Player"
+        },
+        {
+            name = "item",
+            description = "The pocket item's index in the pocket.",
+            type = "table"
+        },
+        {
+            name = "serialized",
+            description = "The pocket item.",
+            type = "table"
+        }
+    },
+    returns = {
+        {
+            name = "answer",
+            description = "Whether the item can be dropped.",
+            type = "boolean"
+        },
+        {
+            name = "message",
+            description = "The message to send to the player when the answer is false.",
+            type = "string"
+        }
+    }
+}
+
+DarkRP.hookStub{
     name = "onPocketItemRemoved",
     description = "Called when an item is removed from the pocket.",
     parameters = {
@@ -147,6 +181,14 @@ local function serialize(ent)
     local serialized = duplicator.CopyEntTable(ent)
     serialized.DT = getDTVars(ent)
 
+    -- this function is also called in duplicator.CopyEntTable, but some
+    -- entities change the DT vars of a copied entity (e.g. Lexic's moneypot)
+    -- That is undone with the getDTVars function call.
+    -- Re-call OnEntityCopyTableFinish assuming its implementation is pure.
+    if ent.OnEntityCopyTableFinish then
+        ent:OnEntityCopyTableFinish(serialized)
+    end
+
     return serialized
 end
 
@@ -176,6 +218,14 @@ local function deserialize(ply, item)
     local phys = ent:GetPhysicsObject()
     timer.Simple(0, function() if phys:IsValid() then phys:Wake() end end)
 
+    if ent.OnDuplicated then
+        ent:OnDuplicated(item)
+    end
+
+    if ent.PostEntityPaste then
+        ent:PostEntityPaste(ply, ent, {ent})
+    end
+
     return ent
 end
 
@@ -191,6 +241,8 @@ local function sendPocketItems(ply)
         net.WriteTable(ply:getPocketItems())
     net.Send(ply)
 end
+
+util.AddNetworkString("DarkRP_PocketMenu")
 
 --[[---------------------------------------------------------------------------
 Interface functions
@@ -263,6 +315,12 @@ util.AddNetworkString("DarkRP_spawnPocket")
 net.Receive("DarkRP_spawnPocket", function(len, ply)
     local item = net.ReadFloat()
     if not ply.darkRPPocket or not ply.darkRPPocket[item] then return end
+    local canPickup, message = hook.Call("canDropPocketItem", nil, ply, item, ply.darkRPPocket[item])
+    if canPickup == false then
+        if message then DarkRP.notify(ply, 1, 4, message) end
+        sendPocketItems(ply)
+        return
+    end
     ply:dropPocketItem(item)
 end)
 
@@ -280,6 +338,7 @@ function GAMEMODE:canPocket(ply, item)
     if string.find(class, "func_") then return false, DarkRP.getPhrase("cannot_pocket_x") end
     if item:IsRagdoll() then return false, DarkRP.getPhrase("cannot_pocket_x") end
     if item:IsNPC() then return false, DarkRP.getPhrase("cannot_pocket_x") end
+    if not duplicator.IsAllowed(class) then return false, DarkRP.getPhrase("cannot_pocket_x") end
 
     local trace = ply:GetEyeTrace()
     if ply:EyePos():DistToSqr(trace.HitPos) > 22500 then return false end

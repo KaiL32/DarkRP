@@ -3,7 +3,8 @@ local mouseX, mouseY = ScrW() / 2, ScrH() / 2
 function GM:ShowSpare1()
     local jobTable = LocalPlayer():getJobTable()
 
-    if jobTable.ShowSpare1 then
+    -- We need to check for the existance of jobTable here, because in very rare edge cases, the player's team isn't set, when the getJobTable-function is called here.
+    if jobTable and jobTable.ShowSpare1 then
         return jobTable.ShowSpare1(LocalPlayer())
     end
 
@@ -20,11 +21,12 @@ end
 function GM:ShowSpare2()
     local jobTable = LocalPlayer():getJobTable()
 
-    if jobTable.ShowSpare2 then
+    -- We need to check for the existance of jobTable here, because in very rare edge cases, the player's team isn't set, when the getJobTable-function is called here.
+    if jobTable and jobTable.ShowSpare2 then
         return jobTable.ShowSpare2(LocalPlayer())
     end
 
-    DarkRP.toggleF4Menu()
+    f4.toogle()
 end
 
 function GM:PlayerStartVoice(ply)
@@ -72,11 +74,16 @@ end
 function GM:teamChanged(before, after)
 end
 
-local function OnChangedTeam(um)
-    local oldTeam, newTeam = um:ReadShort(), um:ReadShort()
+local function OnChangedTeam( oldTeam, newTeam )
     hook.Call("teamChanged", GAMEMODE, oldTeam, newTeam) -- backwards compatibility
     hook.Call("OnPlayerChangedTeam", GAMEMODE, LocalPlayer(), oldTeam, newTeam)
 end
-usermessage.Hook("OnChangedTeam", OnChangedTeam)
+
+net.Receive( "DRP#OnChangedTeam", function()
+    local oldTeam = net.ReadInt( 10 )
+    local newTeam = net.ReadInt( 10 )
+
+    OnChangedTeam( oldTeam, newTeam )
+end )
 
 timer.Simple(0, function() GAMEMODE.ShowTeam = DarkRP.openKeysMenu end)

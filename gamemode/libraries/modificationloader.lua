@@ -14,7 +14,7 @@ DarkRP.disabledDefaults["modules"] = {
     ["fpp"]              = false,
     ["hitmenu"]          = false,
     ["hud"]              = false,
-    ["hungermod"]        = true,
+    ["hungermod"]        = false,
     ["playerscale"]      = false,
     ["sleep"]            = false,
 }
@@ -147,5 +147,6 @@ function GM:DarkRPFinishedLoading()
     loadLanguages()
     loadModules()
     loadCustomDarkRPItems()
-    hook.Call("loadCustomDarkRPItems", GAMEMODE)
+    hook.Call("loadCustomDarkRPItems", self)
+    hook.Call("postLoadCustomDarkRPItems", self)
 end

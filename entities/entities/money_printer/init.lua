@@ -2,6 +2,8 @@ AddCSLuaFile("cl_init.lua")
 AddCSLuaFile("shared.lua")
 include("shared.lua")
 
+ENT.SpawnOffset = Vector(15, 0, 15)
+
 local function PrintMore(ent)
     if not IsValid(ent) then return end
 
@@ -81,7 +83,7 @@ function ENT:Fireball()
     if not self:IsOnFire() then self.burningup = false return end
     local dist = math.random(20, 280) -- Explosion radius
     self:Destruct()
-    for k, v in pairs(ents.FindInSphere(self:GetPos(), dist)) do
+    for k, v in ipairs(ents.FindInSphere(self:GetPos(), dist)) do
         if not v:IsPlayer() and not v:IsWeapon() and v:GetClass() ~= "predicted_viewmodel" and not v.IsMoneyPrinter then
             v:Ignite(math.random(5, 22), 0)
         elseif v:IsPlayer() then
@@ -99,7 +101,7 @@ function ENT:CreateMoneybag()
     local prevent, hookAmount = hook.Run("moneyPrinterPrintMoney", self, amount)
     if prevent == true then return end
 
-    local MoneyPos = self:GetPos()
+    local MoneyPos = self:GetPos() + self.SpawnOffset
     amount = hookAmount or amount
 
     if self.OverheatChance and self.OverheatChance > 0 then
@@ -112,7 +114,7 @@ function ENT:CreateMoneybag()
         if math.random(1, overheatchance) == 3 then self:BurstIntoFlames() end
     end
 
-    local moneybag = DarkRP.createMoneyBag(Vector(MoneyPos.x + 15, MoneyPos.y, MoneyPos.z + 15), amount)
+    local moneybag = DarkRP.createMoneyBag(MoneyPos, amount)
     hook.Run("moneyPrinterPrinted", self, moneybag)
     self.sparking = false
     timer.Simple(math.random(self.MinTimer, self.MaxTimer), function() PrintMore(self) end)

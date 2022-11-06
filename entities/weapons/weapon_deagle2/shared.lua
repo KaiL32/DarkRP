@@ -1,7 +1,6 @@
 AddCSLuaFile()
 
 if CLIENT then
-    SWEP.PrintName = "Deagle"
     SWEP.Author = "DarkRP Developers"
     SWEP.Slot = 1
     SWEP.SlotPos = 1
@@ -12,6 +11,7 @@ end
 
 SWEP.Base = "weapon_cs_base2"
 
+SWEP.PrintName = "Deagle"
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
 SWEP.Category = "DarkRP (Weapon)"
@@ -24,6 +24,7 @@ SWEP.AutoSwitchTo = false
 SWEP.AutoSwitchFrom = false
 
 SWEP.HoldType = "pistol"
+SWEP.LoweredHoldType = "normal"
 
 SWEP.Primary.Sound = Sound("Weapon_Deagle.Single")
 SWEP.Primary.Recoil = 5.1
@@ -43,4 +44,3 @@ SWEP.Secondary.Ammo = "none"
 
 SWEP.IronSightsPos = Vector(-6.35, -7.5, 2.02)
 SWEP.IronSightsAng = Vector(0.51, 0, 0)
-

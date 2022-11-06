@@ -57,6 +57,7 @@ function DarkRP.toggleSleep(player, command)
 
 
     if player.Sleeping and IsValid(player.SleepRagdoll) then
+        player:SetParent()
         local frozen = player:IsFrozen()
         player.OldHunger = player:getDarkRPVar("Energy")
         player.SleepSound:Stop()
@@ -92,7 +93,7 @@ function DarkRP.toggleSleep(player, command)
 
             end
             local cl_defaultweapon = player:GetInfo("cl_defaultweapon")
-            if ( player:HasWeapon( cl_defaultweapon )  ) then
+            if ( player:HasWeapon( cl_defaultweapon ) ) then
                 player:SelectWeapon( cl_defaultweapon )
             end
             player:GetTable().BeforeSleepTeam = nil
@@ -106,7 +107,10 @@ function DarkRP.toggleSleep(player, command)
             player:Lock()
         end
 
-        SendUserMessage("blackScreen", player, false)
+        if player.blackScreen then
+            player.blackScreen = false
+            SendUserMessage("blackScreen", player, false)
+        end
 
         if command == true then
             player:arrest()
@@ -132,7 +136,7 @@ function DarkRP.toggleSleep(player, command)
 
         if not player:isArrested() then
             player.WeaponsForSleep = {}
-            for k, v in pairs(player:GetWeapons()) do
+            for k, v in ipairs(player:GetWeapons()) do
                 player.WeaponsForSleep[k] = {v:GetClass(), player:GetAmmoCount(v:GetPrimaryAmmoType()),
                 v:GetPrimaryAmmoType(), player:GetAmmoCount(v:GetSecondaryAmmoType()), v:GetSecondaryAmmoType(),
                 v:Clip1(), v:Clip2()}
@@ -162,10 +166,15 @@ function DarkRP.toggleSleep(player, command)
         player.SleepRagdoll = ragdoll
         player.KnockoutTimer = CurTime()
         player:GetTable().BeforeSleepTeam = player:Team()
+        player:SetMoveType(MOVETYPE_NONE) -- Required for parenting to work properly
+        player:SetParent(ragdoll)
         --Make sure noone can pick it up:
         ragdoll:CPPISetOwner(player)
 
-        SendUserMessage("blackScreen", player, true)
+        if not player.blackScreen then
+            player.blackScreen = true
+            SendUserMessage("blackScreen", player, true)
+        end
 
         player.SleepSound = CreateSound(ragdoll, "npc/ichthyosaur/water_breath.wav")
         player.SleepSound:PlayEx(0.10, 100)

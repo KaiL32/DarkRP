@@ -1,18 +1,50 @@
 local meta = FindMetaTable("Entity")
 local black = Color(0, 0, 0, 255)
 local white = Color(255, 255, 255, 200)
-local red = Color(128, 30, 30, 255)
+local red = Color(255, 171, 16)
+local changeDoorAccess = false
+
+surface.CreateFont( "gp_doors#30", {
+    size = 30,
+	weight = 350,
+	antialias = true,
+	extended = true,
+	shadow = false,
+	outline = false,
+	font = "Roboto"
+} )
+
+surface.CreateFont( "gp_doors#30_sh", {
+	size = 30,
+	weight = 350,
+	antialias = true,
+	extended = true,
+	shadow = false,
+	outline = false,
+	blursize = 6,
+	font = "Roboto"
+} )
+
+local function updatePrivs()
+    CAMI.PlayerHasAccess(LocalPlayer(), "DarkRP_ChangeDoorSettings", function(b, _)
+        changeDoorAccess = b
+    end)
+end
+-- Timer due to lack of "on privilege changed" hook
+hook.Add("InitPostEntity", "Load door privileges", function()
+    updatePrivs()
+    timer.Create("Door changeDoorAccess checker", 1, 0, updatePrivs)
+end)
 
 function meta:drawOwnableInfo()
     local ply = LocalPlayer()
-    if ply:InVehicle() then return end
+    if ply:InVehicle() and not ply:GetAllowWeaponsInVehicle() then return end
 
     -- Look, if you want to change the way door ownership is drawn, don't edit this file, use the hook instead!
     local doorDrawing = hook.Call("HUDDrawDoorData", nil, self)
     if doorDrawing == true then return end
 
     local blocked = self:getKeysNonOwnable()
-    local superadmin = ply:IsSuperAdmin()
     local doorTeams = self:getKeysDoorTeams()
     local doorGroup = self:getKeysDoorGroup()
     local playerOwned = self:isKeysOwned() or table.GetFirstValue(self:getKeysCoOwners() or {}) ~= nil
@@ -22,6 +54,11 @@ function meta:drawOwnableInfo()
 
     local title = self:getKeysTitle()
     if title then table.insert(doorInfo, title) end
+    
+    if string.len(self:GetNWString( 'veh_lastowner' )) > 0 then
+        table.insert(doorInfo, 'Автомобиль в угоне' )
+        table.insert(doorInfo, 'Прошлый владелец: '..self:GetNWString( 'veh_lastowner' ) )
+    end 
 
     if owned then
         table.insert(doorInfo, DarkRP.getPhrase("keys_owned_by"))
@@ -39,7 +76,7 @@ function meta:drawOwnableInfo()
         if allowedCoOwn and not fn.Null(allowedCoOwn) then
             table.insert(doorInfo, DarkRP.getPhrase("keys_other_allowed"))
 
-            for k  in pairs(allowedCoOwn) do
+            for k in pairs(allowedCoOwn) do
                 local ent = Player(k)
                 if not IsValid(ent) or not ent:IsPlayer() then continue end
                 table.insert(doorInfo, ent:Nick())
@@ -53,27 +90,25 @@ function meta:drawOwnableInfo()
 
             table.insert(doorInfo, RPExtraTeams[k].name)
         end
-    elseif blocked and superadmin then
+    elseif blocked and changeDoorAccess then
         table.insert(doorInfo, DarkRP.getPhrase("keys_allow_ownership"))
     elseif not blocked then
         table.insert(doorInfo, DarkRP.getPhrase("keys_unowned"))
-        if superadmin then
+        if changeDoorAccess then
             table.insert(doorInfo, DarkRP.getPhrase("keys_disallow_ownership"))
         end
     end
 
     if self:IsVehicle() then
-        for _, v in ipairs(player.GetAll()) do
-            if not IsValid(v) or v:GetVehicle() ~= self then continue end
-
-            table.insert(doorInfo, DarkRP.getPhrase("driver", v:Nick()))
-            break
+        local driver = self:GetDriver()
+        if driver:IsPlayer() then
+            table.insert(doorInfo, DarkRP.getPhrase("driver", driver:Nick()))
         end
     end
 
-    local x, y = ScrW() / 2, ScrH() / 2
-    draw.DrawNonParsedText(table.concat(doorInfo, "\n"), "TargetID", x , y + 1 , black, 1)
-    draw.DrawNonParsedText(table.concat(doorInfo, "\n"), "TargetID", x, y, (blocked or owned) and white or red, 1)
+    local pos = self:WorldSpaceCenter():ToScreen()
+    local text = table.concat(doorInfo, "\n")
+    draw.niceShadowTextNoParsed(text, "gp_doors#30", pos.x, pos.y, (blocked or owned) and white or red, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 end
 
 

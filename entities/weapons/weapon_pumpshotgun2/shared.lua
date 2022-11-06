@@ -1,7 +1,6 @@
 AddCSLuaFile()
 
 if CLIENT then
-    SWEP.PrintName = "Pump Shotgun"
     SWEP.Author = "DarkRP Developers"
     SWEP.Slot = 2
     SWEP.SlotPos = 0
@@ -12,6 +11,7 @@ end
 
 DEFINE_BASECLASS("weapon_cs_base2")
 
+SWEP.PrintName = "Pump Shotgun"
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
 SWEP.Category = "DarkRP (Weapon)"
@@ -23,7 +23,8 @@ SWEP.Weight = 5
 SWEP.AutoSwitchTo = false
 SWEP.AutoSwitchFrom = false
 
-SWEP.HoldType = "ar2"
+SWEP.HoldType = "shotgun"
+SWEP.LoweredHoldType = "normal"
 
 SWEP.Primary.Sound = Sound("Weapon_M3.Single")
 SWEP.Primary.Recoil = 1.5
@@ -90,13 +91,13 @@ function SWEP:Reload()
         self:SendWeaponAnim(ACT_VM_RELOAD)
         self:SetIronsights(false)
         self:SetHoldType(self.HoldType)
-        self.Owner:SetAnimation(PLAYER_RELOAD)
+        self:GetOwner():SetAnimation(PLAYER_RELOAD)
         self:SetHoldType("normal")
     end
 end
 
 function SWEP:Think()
-	self:CalcViewModel()
+    self:CalcViewModel()
     if self:GetReloadEndTime() ~= 0 and CurTime() >= self:GetReloadEndTime() then
         -- Finished reload -
         if self:Clip1() >= self.Primary.ClipSize or self:GetOwner():GetAmmoCount(self.Primary.Ammo) <= 0 then
